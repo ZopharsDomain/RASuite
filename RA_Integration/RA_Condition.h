@@ -118,6 +118,9 @@ public:
 		Standard,
 		PauseIf,
 		ResetIf,
+		AddSource,
+		SubSource,
+		AddHits,
 
 		NumConditionTypes
 	};
@@ -158,6 +161,10 @@ public:
 
 	inline BOOL IsResetCondition() const			{ return( m_nConditionType == ResetIf ); }
 	inline BOOL IsPauseCondition() const			{ return( m_nConditionType == PauseIf ); }
+	inline BOOL IsAddCondition() const				{ return( m_nConditionType == AddSource ); }
+	inline BOOL IsSubCondition() const				{ return( m_nConditionType == SubSource ); }
+	inline BOOL IsAddHitsCondition() const			{ return( m_nConditionType == AddHits ); }
+
 	inline ConditionType GetConditionType() const	{ return m_nConditionType; }
 	void SetConditionType( ConditionType nNewType )	{ m_nConditionType = nNewType; }
 	
@@ -170,6 +177,9 @@ public:
 	void SetIsBasicCondition()						{ m_nConditionType = Standard; }
 	void SetIsPauseCondition()						{ m_nConditionType = PauseIf; }
 	void SetIsResetCondition()						{ m_nConditionType = ResetIf; }
+	void SetIsAddCondition()						{ m_nConditionType = AddSource; }
+	void SetIsSubCondition()						{ m_nConditionType = SubSource; }
+	void SetIsAddHitsCondition()					{ m_nConditionType = AddHits; }
 
 	void Set( const Condition& rRHS )				{ (*this) = rRHS; }
 
@@ -191,10 +201,11 @@ public:
 	BOOL Test( BOOL& bDirtyConditions, BOOL& bResetRead, BOOL bMatchAny );
 	size_t Count() const		{ return m_Conditions.size(); }
 
-	void Add( const Condition& newCond )		{ m_Conditions.push_back( newCond ); }
-	Condition& GetAt( size_t i )				{ return m_Conditions[i]; }
-	const Condition& GetAt( size_t i ) const	{ return m_Conditions[i]; }
-	void Clear()								{ m_Conditions.clear(); }
+	void Add( const Condition& newCond )				{ m_Conditions.push_back( newCond ); }
+	void Insert( size_t i, const Condition& newCond )	{ m_Conditions.insert( m_Conditions.begin() + i, newCond ); }
+	Condition& GetAt( size_t i )						{ return m_Conditions[i]; }
+	const Condition& GetAt( size_t i ) const			{ return m_Conditions[i]; }
+	void Clear()										{ m_Conditions.clear(); }
 	void RemoveAt( size_t i );
 	BOOL Reset( BOOL bIncludingDeltas );	//	Returns dirty
 

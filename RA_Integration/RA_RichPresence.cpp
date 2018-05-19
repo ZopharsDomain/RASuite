@@ -13,7 +13,7 @@ const std::string& RA_Lookup::Lookup( DataPos nValue ) const
 	if( m_lookupData.find( nValue ) != m_lookupData.end() )
 		return m_lookupData.find( nValue )->second;
 
-	static const std::string sUnknown = "Unknown";
+	static const std::string sUnknown = "";
 	return sUnknown;
 }
 
@@ -26,6 +26,76 @@ RA_Formattable::RA_Formattable( const std::string& sDesc, RA_Leaderboard::Format
 std::string RA_Formattable::Lookup( DataPos nValue ) const
 {
 	return RA_Leaderboard::FormatScore( m_nFormatType, nValue );
+}
+
+RA_ConditionalDisplayString::RA_ConditionalDisplayString( char* pBuffer )
+{
+	++pBuffer; // skip first question mark
+	do
+	{
+		ConditionSet conditionSet;
+
+		do
+		{
+			Condition nNewCond;
+			nNewCond.ParseFromString( pBuffer );
+			conditionSet.Add( nNewCond );
+
+			if( *pBuffer != '_' ) // AND
+				break;
+
+			++pBuffer;
+		} while( true );
+
+		m_conditions.push_back( conditionSet );
+
+		if (*pBuffer != 'S') // OR
+			break;
+
+		++pBuffer;
+	} while( true ); // OR
+
+	if( *pBuffer == '?' )
+	{
+		// valid condition
+		*pBuffer++;
+		m_sDisplayString = pBuffer;
+	}
+	else
+	{
+		// not a valid condition, ensure Test() never returns true
+		m_conditions.clear();
+	}
+}
+
+bool RA_ConditionalDisplayString::Test()
+{
+	std::vector<ConditionSet>::iterator iter = m_conditions.begin();
+	if( iter == m_conditions.end() )
+		return false;
+
+	BOOL bDirtyConditions, bResetRead; // for HitCounts - not supported in RichPresence
+
+	// if core condition is not true, it doesnt match
+	if( !iter->Test( bDirtyConditions, bResetRead, false ) )
+		return false;
+
+	// core condition is true. if no alt conditions, it does match.
+	++iter;
+	if (iter == m_conditions.end())
+		return true;
+
+	// core condition is true. if any alt condition is true, it matches
+	do
+	{
+		if ( iter->Test( bDirtyConditions, bResetRead, false ) )
+			return true;
+
+		++iter;
+	} while( iter != m_conditions.end() );
+
+	// no alt conditions are true, not a match.
+	return false;
 }
 
 void RA_RichPresenceInterpretter::ParseRichPresenceFile( const std::string& sFilename )
@@ -130,6 +200,16 @@ void RA_RichPresenceInterpretter::ParseRichPresenceFile( const std::string& sFil
 				
 				char* pBuf =  &buffer[0];
 				m_sDisplay = _ReadStringTil( '\n', pBuf, TRUE );	//	Terminates \n instead
+
+				while( buffer[0] == '?' ) 
+				{
+					RA_ConditionalDisplayString conditionalString( buffer );
+					m_conditionalDisplayStrings.push_back( conditionalString );
+
+					_ReadTil( EndLine, buffer, 4096, &nCharsRead, pFile );
+					pBuf = &buffer[0];
+					m_sDisplay = _ReadStringTil( '\n', pBuf, TRUE );
+				}
 			}
 
 			_ReadTil( EndLine, buffer, 4096, &nCharsRead, pFile );
@@ -181,6 +261,11 @@ const std::string& RA_RichPresenceInterpretter::Lookup( const std::string& sName
 	return sReturnVal;
 }
 
+bool RA_RichPresenceInterpretter::Enabled() const
+{
+	return !m_sDisplay.empty();
+}
+
 const std::string& RA_RichPresenceInterpretter::GetRichPresenceString()
 {
 	static std::string sReturnVal;
@@ -192,9 +277,19 @@ const std::string& RA_RichPresenceInterpretter::GetRichPresenceString()
 	std::string sLookupName;
 	std::string sLookupValue;
 
-	for( size_t i = 0; i < m_sDisplay.size(); ++i )
+	const std::string* sDisplayString = &m_sDisplay;
+	for( std::vector<RA_ConditionalDisplayString>::iterator iter = m_conditionalDisplayStrings.begin(); iter != m_conditionalDisplayStrings.end(); ++iter )
 	{
-		char c = m_sDisplay.at( i );
+		if ( iter->Test() )
+		{
+			sDisplayString = &iter->GetDisplayString();
+			break;
+		}
+	}
+
+	for( size_t i = 0; i < sDisplayString->size(); ++i )
+	{
+		char c = sDisplayString->at( i );
 
 		if( bParsingLookupContent )
 		{
@@ -251,9 +346,10 @@ const std::string& RA_RichPresenceInterpretter::GetRichPresenceString()
 void RA_RichPresenceInterpretter::PersistAndParseScript( GameID nGameID, const std::string& str )
 {
 	//	Read to file:
-	SetCurrentDirectory( Widen( g_sHomeDir ).c_str() );
+	SetCurrentDirectory( NativeStr( g_sHomeDir ).c_str());
 	_WriteBufferToFile( RA_DIR_DATA + std::to_string( nGameID ) + "-Rich.txt", str );
 						
 	//	Then install it
 	g_RichPresenceInterpretter.ParseRichPresenceFile( RA_DIR_DATA + std::to_string( nGameID ) + "-Rich.txt" );
 }
+

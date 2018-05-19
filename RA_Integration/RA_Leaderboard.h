@@ -4,6 +4,7 @@
 #include "RA_Condition.h"
 
 
+
 class MemValue
 {
 public:
@@ -22,6 +23,9 @@ public:
 	double					m_fModifier;				//	* 60 etc
 	bool					m_bBCDParse;				//	Parse as a binary coded decimal.
 	bool					m_bParseVal;				//	Parse as a value
+	bool					m_bInvertBit = false;
+	unsigned int			m_nSecondAddress = 0;
+	ComparisonVariableSize	m_nSecondVarSize;
 };
 
 
@@ -29,8 +33,17 @@ public:
 class ValueSet
 {
 public:
+	enum OperationType
+	{
+		Operation_None,
+		Operation_Addition,
+		Operation_Maximum
+	};
+
+public:
 	void ParseMemString( char* sBuffer );
 	double GetValue() const;
+	double GetOperationsValue( std::vector<OperationType> ) const;
 	void AddNewValue( MemValue nVal );
 	void Clear();
 
@@ -93,6 +106,7 @@ public:
 	void SortRankInfo();
 
 	FormatType GetFormatType() const						{ return m_format; }
+	std::vector< ValueSet::OperationType > m_sOperations;
 
 private:
 	const LeaderboardID		m_nID;			//	DB ID for this LB
@@ -101,6 +115,7 @@ private:
 	ConditionSet			m_submitCond;	//	Submit new score if this is true
 
 	bool					m_bStarted;		//	False = check start condition. True = check cancel or submit conditions.
+	bool                    m_bSubmitted;   //  True if already submitted.
 
 	ValueSet				m_value;		//	A collection of memory addresses and values to produce one value.
 	ValueSet				m_progress;		//	A collection of memory addresses, used to show progress towards completion.

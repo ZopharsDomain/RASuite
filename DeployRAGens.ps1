@@ -17,7 +17,7 @@
 
         $TargetArchiveName = "RAGens.zip"
 
-        $VersionDoc = "..\web\LatestRAGensVersion.html"
+        $VersionDoc = "..\RAWeb\public\LatestRAGensVersion.html"
 
         $ExpectedTag = "RAGens"
 
@@ -27,10 +27,10 @@
 
         $Password = ConvertTo-SecureString 'Unused' -AsPlainText -Force
         $Credential = New-Object System.Management.Automation.PSCredential ('ec2-user', $Password)
-        $KeyPath = ".\RetroAchievementsAmazonPrivKey.ppk"
-        $TargetURL = "RetroAchievements.org"
-        $WebRoot = "/var/www/html"
-        $WebRootBin = "/var/www/html/bin"
+        $KeyPath = ".\RetroAchievementsKey"
+        $TargetURL = "www.RetroAchievements.org"
+        $WebRoot = "/var/www/html/public"
+        $WebRootBin = "/var/www/html/public/bin"
 
         if (-not (Test-Path "$env:ProgramFiles\7-Zip\7z.exe")) 
         {

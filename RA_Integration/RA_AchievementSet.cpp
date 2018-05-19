@@ -3,6 +3,7 @@
 #include "RA_AchievementSet.h"
 #include "RA_Core.h"
 #include "RA_Dlg_Achievement.h"
+#include "RA_Dlg_AchEditor.h"
 #include "RA_User.h"
 #include "RA_PopupWindows.h"
 #include "RA_httpthread.h"
@@ -182,7 +183,12 @@ void AchievementSet::Test()
 
  			ASSERT( nOffset < NumAchievements() );
  			if( nOffset < NumAchievements() )
+			{
 				g_AchievementsDialog.ReloadLBXData( nOffset );
+
+				if( g_AchievementEditorDialog.ActiveAchievement() == &ach )
+					g_AchievementEditorDialog.LoadAchievement( &ach, TRUE );
+			}
 
 			if( RAUsers::LocalUser().IsLoggedIn() )
 			{
@@ -222,6 +228,15 @@ void AchievementSet::Test()
 					
 					RAWeb::CreateThreadedHTTPRequest( RequestSubmitAwardAchievement, args );
 				}
+			}
+
+			if( ach.GetPauseOnTrigger() )
+			{
+				RA_CausePause();
+
+				char buffer[256];
+				sprintf_s( buffer, 256, "Pause on Trigger: %s", ach.Title().c_str() );
+				MessageBox( g_RAMainWnd, NativeStr(buffer).c_str(), TEXT("Paused"), MB_OK );
 			}
 		}
 	}
@@ -366,7 +381,7 @@ BOOL AchievementSet::FetchFromWebBlocking( GameID nGameID )
 		doc.HasMember( "PatchData" ) )
 	{
 		const Value& PatchData = doc[ "PatchData" ];
-		SetCurrentDirectory( Widen( g_sHomeDir ).c_str() );
+		SetCurrentDirectory( NativeStr( g_sHomeDir ).c_str() );
 		FILE* pf = nullptr;
 		fopen_s( &pf, std::string( RA_DIR_DATA + std::to_string( nGameID ) + ".txt" ).c_str(), "wb" );
 		if( pf != nullptr )
@@ -387,8 +402,9 @@ BOOL AchievementSet::FetchFromWebBlocking( GameID nGameID )
 	else
 	{
 		//	Could not connect...
-		PopupWindows::AchievementPopups().AddMessage( 
-			MessagePopup( "Could not connect to " RA_HOST_URL "...", "Working offline...", PopupInfo ) ); //?
+		PopupWindows::AchievementPopups().AddMessage(
+			MessagePopup(std::string("Could not connect to " RA_HOST_URL "..."), "Working offline...", PopupInfo)
+		);
 
 		return FALSE;
 	}
@@ -403,7 +419,7 @@ BOOL AchievementSet::LoadFromFile( GameID nGameID )
 
 	const std::string sFilename = GetAchievementSetFilename(nGameID);
 
-	SetCurrentDirectory(Widen(g_sHomeDir).c_str());
+	SetCurrentDirectory(NativeStr(g_sHomeDir).c_str());
 	FILE* pFile = nullptr;
 	errno_t nErr = fopen_s(&pFile, sFilename.c_str(), "r");
 	if (pFile != nullptr)
@@ -487,6 +503,12 @@ BOOL AchievementSet::LoadFromFile( GameID nGameID )
 					}
 				}
 
+				if (m_nSetType != Core)
+				{
+					fclose(pFile);
+					return TRUE;
+				}
+
 				const Value& LeaderboardsData = doc["Leaderboards"];
 				for (SizeType i = 0; i < LeaderboardsData.Size(); ++i)
 				{
@@ -550,7 +572,7 @@ void AchievementSet::SaveProgress( const char* sSaveStateFilename )
 	if( sSaveStateFilename == NULL )
 		return;
 	
-	SetCurrentDirectory( Widen( g_sHomeDir ).c_str() );
+	SetCurrentDirectory( NativeStr( g_sHomeDir ).c_str() );
 	char buffer[ 4096 ];
 	sprintf_s( buffer, 4096, "%s.rap", sSaveStateFilename );
 	FILE* pf = NULL;

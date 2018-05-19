@@ -48,6 +48,7 @@ public:
 
 	void InstallHWND( HWND hWnd )									{ m_hAchievementEditorDlg = hWnd; }
 	HWND GetHWND() const											{ return m_hAchievementEditorDlg; }
+	BOOL IsActive() const;
 
 	Achievement* ActiveAchievement() const							{ return m_pSelectedAchievement; }
 	BOOL IsPopulatingAchievementEditorData() const					{ return m_bPopulatingAchievementEditorData; }
@@ -61,12 +62,15 @@ public:
 	size_t GetSelectedConditionGroup() const;
 	void SetSelectedConditionGroup( size_t nGrp ) const;
 
+	ConditionSet m_ConditionClipboard;
+
 private:
 	void RepopulateGroupList( Achievement* pCheevo );
 	void PopulateConditions( Achievement* pCheevo );
 	void SetupColumns( HWND hList );
 
 	const int AddCondition( HWND hList, const Condition& Cond );
+	void UpdateCondition( HWND hList, LV_ITEM& item, const Condition& Cond );
 
 private:
 	static const int m_nNumCols = 10;//;sizeof( g_sColTitles ) / sizeof( g_sColTitles[0] );
@@ -75,7 +79,7 @@ private:
 	HWND m_hICEControl;
 
 	char m_lbxData[ MAX_CONDITIONS ][ m_nNumCols ][ MEM_STRING_TEXT_LEN ];
-	wchar_t m_lbxGroupNames[ MAX_CONDITIONS ][ MEM_STRING_TEXT_LEN ];
+	TCHAR m_lbxGroupNames[ MAX_CONDITIONS ][ MEM_STRING_TEXT_LEN ];
 	int m_nNumOccupiedRows;
 
 	Achievement* m_pSelectedAchievement;
@@ -84,5 +88,7 @@ private:
 
 	BadgeNames m_BadgeNames;
 };
+
+void GenerateResizes(HWND hDlg);
 
 extern Dlg_AchievementEditor g_AchievementEditorDialog;

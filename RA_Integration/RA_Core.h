@@ -2,7 +2,7 @@
 
 #include "RA_Defs.h"
 #include "RA_Interface.h"
-//#include <stdio.h>
+#include <stdio.h>
 
 #if defined RA_EXPORTS
 #define API __declspec(dllexport)
@@ -92,7 +92,8 @@ API int CCONV _RA_HardcoreModeIsActive();
 API int CCONV _RA_HTTPGetRequestExists( const char* sPageName );
 
 //	Install user-side functions that can be called from the DLL
-API void CCONV _RA_InstallSharedFunctions( bool(*fpIsActive)(void), void(*fpCauseUnpause)(void), void(*fpRebuildMenu)(void), void(*fpEstimateTitle)(char*), void(*fpResetEmulation)(void), void(*fpLoadROM)(const char*) );
+API void CCONV _RA_InstallSharedFunctions(bool(*fpIsActive)(void), void(*fpCauseUnpause)(void), void(*fpRebuildMenu)(void), void(*fpEstimateTitle)(char*), void(*fpResetEmulation)(void), void(*fpLoadROM)(const char*));
+API void CCONV _RA_InstallSharedFunctionsExt( bool(*fpIsActive)(void), void(*fpCauseUnpause)(void), void(*fpCausePause)(void), void(*fpRebuildMenu)(void), void(*fpEstimateTitle)(char*), void(*fpResetEmulation)(void), void(*fpLoadROM)(const char*) );
 
 #ifdef __cplusplus
 }
@@ -116,6 +117,9 @@ extern const char* g_sClientName;
 extern bool g_bRAMTamperedWith;
 extern bool g_bHardcoreModeActive;
 extern bool g_bLeaderboardsActive;
+extern bool g_bLBDisplayNotification;
+extern bool g_bLBDisplayCounter;
+extern bool g_bLBDisplayScoreboard;
 extern unsigned int g_nNumHTTPThreads;
 
 //	Read a file to a malloc'd buffer. Returns NULL on error. Owner MUST free() buffer if not NULL.
@@ -145,3 +149,9 @@ extern std::string _TimeStampToString( time_t nTime );
 extern std::string GetFolderFromDialog();
 
 extern BOOL RemoveFileIfExists(const std::string& sFilePath);
+
+BOOL CanCausePause();
+
+void RestoreWindowPosition(HWND hDlg, const char* sDlgKey, bool bToRight, bool bToBottom);
+void RememberWindowPosition(HWND hDlg, const char* sDlgKey);
+void RememberWindowSize(HWND hDlg, const char* sDlgKey);

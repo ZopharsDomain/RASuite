@@ -31,7 +31,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 Achievement::Achievement( AchievementSetType nType ) :
-	m_nSetType( nType )
+	m_nSetType( nType ), m_bPauseOnTrigger( FALSE ), m_bPauseOnReset( FALSE )
 {
 	Clear();
 	m_vConditions.push_back( ConditionSet() );
@@ -83,7 +83,12 @@ char* Achievement::ParseMemString( char* sMem )
 			nNewCond.ParseFromString( pBuffer );
 			NewConditionGroup.push_back( nNewCond );
 		}
-		while( *pBuffer == '_' || *pBuffer == 'R' || *pBuffer == 'P' ); //	AND, ResetIf, PauseIf
+		while( *pBuffer == '_' ||	// AND
+			*pBuffer == 'R' ||		// ResetIf
+			*pBuffer == 'P' ||		// PauseIf
+			*pBuffer == 'A' ||		// AddSource
+			*pBuffer == 'B' ||		// SubSource
+			*pBuffer == 'C' );		// AddHits
 
 		for( size_t i = 0; i < NewConditionGroup.size(); ++i )
 			AddCondition( nCondGroupID, NewConditionGroup[i] );
@@ -190,9 +195,19 @@ BOOL Achievement::Test()
 	{
 		SetDirtyFlag( Dirty_Conditions );
 	}
+
 	if( bResetConditions )
 	{
 		Reset();
+
+		if ( GetPauseOnReset() )
+		{
+			RA_CausePause();
+
+			char buffer[256];
+			sprintf_s( buffer, 256, "Pause on Reset: %s", Title().c_str() );
+			MessageBox( g_RAMainWnd, NativeStr(buffer).c_str(), TEXT("Paused"), MB_OK );
+		}
 	}
 
 	return bRetVal && bRetValSubCond;
@@ -216,6 +231,8 @@ void Achievement::Clear()
 	m_nPointValue = 0;
 	m_bActive = FALSE;
 	m_bModified = FALSE;
+	m_bPauseOnTrigger = FALSE;
+	m_bPauseOnReset = FALSE;
 	ClearDirtyFlag();
 	ClearBadgeImage();
 
@@ -282,11 +299,18 @@ void Achievement::SetBadgeImage( const std::string& sBadgeURI )
 	SetDirtyFlag( Dirty_Badge );
 	ClearBadgeImage();
 
-	m_sBadgeImageURI = sBadgeURI;
+	char chars[] = "_lock";
 
-	m_hBadgeImage = LoadOrFetchBadge( sBadgeURI, RA_BADGE_PX );
-	if( sBadgeURI.find( "_lock" ) == std::string::npos )	//	Ensure we're not going to look for _lock_lock
-		m_hBadgeImageLocked = LoadOrFetchBadge( sBadgeURI + "_lock", RA_BADGE_PX );
+	std::string sNewBadgeURI = sBadgeURI;
+
+	for (unsigned int i = 0; i < strlen(chars); ++i)
+		sNewBadgeURI.erase(std::remove(sNewBadgeURI.begin(), sNewBadgeURI.end(), chars[i]), sNewBadgeURI.end());
+
+	m_sBadgeImageURI = sNewBadgeURI;
+	m_hBadgeImage = LoadOrFetchBadge(sNewBadgeURI, RA_BADGE_PX);
+
+	if (sNewBadgeURI.find("_lock") == std::string::npos)	//	Ensure we're not going to look for _lock_lock
+		m_hBadgeImageLocked = LoadOrFetchBadge(sNewBadgeURI + "_lock", RA_BADGE_PX);
 }
 
 void Achievement::Reset()
@@ -307,6 +331,17 @@ size_t Achievement::AddCondition( size_t nConditionGroup, const Condition& rNewC
 		m_vConditions.push_back( ConditionSet() );
 
 	m_vConditions[nConditionGroup].Add( rNewCond );	//	NB. Copy by value	
+	SetDirtyFlag( Dirty__All );
+
+	return m_vConditions[nConditionGroup].Count();
+}
+
+size_t Achievement::InsertCondition( size_t nConditionGroup, size_t nIndex, const Condition& rNewCond )
+{ 
+	while( NumConditionGroups() <= nConditionGroup )	//	ENSURE this is a legal op!
+		m_vConditions.push_back( ConditionSet() );
+
+	m_vConditions[nConditionGroup].Insert( nIndex, rNewCond );	//	NB. Copy by value	
 	SetDirtyFlag( Dirty__All );
 
 	return m_vConditions[nConditionGroup].Count();
@@ -351,6 +386,12 @@ std::string Achievement::CreateMemString() const
 				strcat_s( sNextCondition, 256, "R:" );
 			else if( NextCond.IsPauseCondition() )
 				strcat_s( sNextCondition, 256, "P:" );
+			else if ( NextCond.IsAddCondition() )
+				strcat_s( sNextCondition, 256, "A:" );
+			else if ( NextCond.IsSubCondition() )
+				strcat_s( sNextCondition, 256, "B:" );
+			else if ( NextCond.IsAddHitsCondition() )
+				strcat_s( sNextCondition, 256, "C:" );
 			
 			//	Source:
 			if( ( Src.Type() == Address ) || 

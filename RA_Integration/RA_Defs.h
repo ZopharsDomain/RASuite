@@ -43,6 +43,7 @@ extern GetParseErrorFunc GetJSONParseErrorStr;
 #define RA_DIR_DATA						RA_DIR_BASE##"Data\\"
 #define RA_DIR_BADGE					RA_DIR_BASE##"Badge\\"
 #define RA_DIR_USERPIC					RA_DIR_BASE##"UserPic\\"
+#define RA_DIR_BOOKMARKS				RA_DIR_BASE##"Bookmarks\\"
 
 #define RA_GAME_HASH_FILENAME			RA_DIR_DATA##"gamehashlibrary.txt"
 #define RA_GAME_LIST_FILENAME			RA_DIR_DATA##"gametitles.txt"
@@ -55,21 +56,8 @@ extern GetParseErrorFunc GetJSONParseErrorStr;
 #define RA_LOG_FILENAME					RA_DIR_DATA##"RALog.txt"
 
 
-#define WIDEN2(x) L ## x
-#define TOWIDESTR(x) WIDEN2(x)
-
-
-#if defined _DEBUG
-//#define RA_HOST_URL "localhost"
-#define RA_HOST_URL "retroachievements.org"
-#else
-#define RA_HOST_URL "retroachievements.org"
-#endif
-
-#define RA_HOST_URL_WIDE TOWIDESTR( RA_HOST_URL )
-
-#define RA_HOST_IMG_URL "i.retroachievements.org"
-#define RA_HOST_IMG_URL_WIDE TOWIDESTR( RA_HOST_IMG_URL )
+#define RA_HOST_URL						"retroachievements.org"
+#define RA_HOST_IMG_URL					"i.retroachievements.org"
 
 #define SIZEOF_ARRAY( ar )	( sizeof( ar ) / sizeof( ar[ 0 ] ) )
 #define SAFE_DELETE( x )	{ if( x != nullptr ) { delete x; x = nullptr; } }
@@ -125,6 +113,83 @@ typedef DWORD			ARGB;
 	const RASize RA_BADGE_PX( 64, 64 );
 	const RASize RA_USERPIC_PX( 64, 64 );
 
+	class ResizeContent
+	{
+	public:
+		enum AlignType
+		{
+			NO_ALIGN,
+			ALIGN_RIGHT,
+			ALIGN_BOTTOM,
+			ALIGN_BOTTOM_RIGHT
+		};
+
+	public:
+		HWND hwnd;
+		POINT pLT;
+		POINT pRB;
+		AlignType nAlignType;
+		int nDistanceX;
+		int nDistanceY;
+		bool bResize;
+
+		ResizeContent( HWND parentHwnd, HWND contentHwnd, AlignType newAlignType, bool isResize )
+		{
+			hwnd = contentHwnd;
+			nAlignType = newAlignType;
+			bResize = isResize;
+			
+			RARect rect;
+			GetWindowRect( hwnd, &rect );
+
+			pLT.x = rect.left;	pLT.y = rect.top;
+			pRB.x = rect.right; pRB.y = rect.bottom;
+
+			ScreenToClient( parentHwnd, &pLT );
+			ScreenToClient( parentHwnd, &pRB );
+
+			GetWindowRect ( parentHwnd, &rect );
+			nDistanceX = rect.Width() - pLT.x;
+			nDistanceY = rect.Height() - pLT.y;
+			
+			if ( bResize )
+			{
+				nDistanceX -= (pRB.x - pLT.x);
+				nDistanceY -= (pRB.y - pLT.y);
+			}
+		}
+
+		void Resize(int width, int height)
+		{
+			int xPos, yPos;
+
+			switch ( nAlignType )
+			{
+				case ResizeContent::ALIGN_RIGHT:
+					xPos = width - nDistanceX - ( bResize ? pLT.x : 0 );
+					yPos = bResize ? ( pRB.y - pLT.x ) : pLT.y;
+					break;
+				case ResizeContent::ALIGN_BOTTOM:
+					xPos = bResize ? ( pRB.x - pLT.x ) : pLT.x;
+					yPos = height - nDistanceY - ( bResize ? pLT.y : 0 );
+					break;
+				case ResizeContent::ALIGN_BOTTOM_RIGHT:
+					xPos = width - nDistanceX - ( bResize ? pLT.x : 0 );
+					yPos = height - nDistanceY - ( bResize ? pLT.y : 0 );
+					break;
+				default:
+					xPos = bResize ? ( pRB.x - pLT.x ) : pLT.x;
+					yPos = bResize ? ( pRB.y - pLT.x ) : pLT.y;
+					break;
+			}
+
+			if ( !bResize )
+				SetWindowPos( hwnd, NULL, xPos, yPos, NULL, NULL, SWP_NOSIZE | SWP_NOZORDER );
+			else
+				SetWindowPos( hwnd, NULL, 0, 0, xPos, yPos, SWP_NOMOVE | SWP_NOZORDER );
+		}
+	};
+
 	enum AchievementSetType
 	{
 		Core,
@@ -147,7 +212,7 @@ typedef DWORD			ARGB;
 	extern void RADebugLog( const char* sFormat, ... );
 	extern BOOL DirectoryExists( const char* sPath );
 
-	const int SERVER_PING_DURATION = 10*60;	//s
+	const int SERVER_PING_DURATION = 2*60;
 //};
 //using namespace RA;
 	
@@ -165,7 +230,25 @@ typedef DWORD			ARGB;
 #define UNUSED( x ) ( x );
 #endif
 
-extern std::string Narrow( const wchar_t* wstr );
-extern std::string Narrow( const std::wstring& wstr );
-extern std::wstring Widen( const char* str );
-extern std::wstring Widen( const std::string& str );
+extern std::string Narrow(const wchar_t* wstr);
+extern std::string Narrow(const std::wstring& wstr);
+extern std::wstring Widen(const char* str);
+extern std::wstring Widen(const std::string& str);
+
+//	No-ops to help convert:
+//	No-ops to help convert:
+extern std::wstring Widen(const wchar_t* wstr);
+extern std::wstring Widen(const std::wstring& wstr);
+extern std::string Narrow(const char* str);
+extern std::string Narrow(const std::string& wstr);
+
+typedef std::basic_string<TCHAR> tstring;
+
+
+#ifdef UNICODE
+#define NativeStr(x) Widen(x)
+#define NativeStrType std::wstring
+#else
+#define NativeStr(x) Narrow(x)
+#define NativeStrType std::string
+#endif

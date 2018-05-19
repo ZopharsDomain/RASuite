@@ -88,6 +88,12 @@
     <ClCompile Include="RA_GameData.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="RA_Dlg_MemBookmark.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="RA_Dlg_RichPresence.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="md5.h">
@@ -180,6 +186,12 @@
     <ClInclude Include="RA_GameData.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="RA_Dlg_MemBookmark.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="RA_Dlg_RichPresence.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Headers">
@@ -194,6 +206,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RA_Shared.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="RA_Version.rc">
       <Filter>Resources</Filter>
     </ResourceCompile>
   </ItemGroup>

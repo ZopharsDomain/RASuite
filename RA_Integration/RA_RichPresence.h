@@ -23,6 +23,19 @@ private:
 	std::map<DataPos, std::string> m_lookupData;
 };
 
+class RA_ConditionalDisplayString
+{
+public:
+	RA_ConditionalDisplayString( char* pLine );
+
+	bool Test();
+	const std::string& GetDisplayString() const { return m_sDisplayString; }
+
+private:
+	std::string m_sDisplayString;
+	std::vector<ConditionSet> m_conditions;
+};
+
 class RA_Formattable
 {
 public:
@@ -51,10 +64,13 @@ public:
 	const std::string& GetRichPresenceString();
 	const std::string& Lookup( const std::string& sLookupName, const std::string& sMemString ) const;
 
+	bool Enabled() const;
+
 private:
 	std::vector<RA_Lookup> m_lookups;
 	std::vector<RA_Formattable> m_formats;
 
+	std::vector<RA_ConditionalDisplayString> m_conditionalDisplayStrings;
 	std::string m_sDisplay;
 };
 
